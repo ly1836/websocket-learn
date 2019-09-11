@@ -14,150 +14,175 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 
+/**
+ * 这是一个例子
+ * 可以在此包下新建类，按不通消息类型(文本和二进制)继承TextEndpoint或BytesEndPoint类
+ * 重写handleMessage方法来接收消息
+ * 重写connected方法来处理建立连接时的请求,
+ */
 @Service
 @ClientEndpoint
-@SiteClientEndpoint(endpointurl = "wss://danmuproxy.douyu.com:8504/")
+//@SiteClientEndpoint(endpointurl = "wss://danmuproxy.douyu.com:8504/")
 public class danmu extends BytesEndPoint {
+
+    //斗鱼房间ID,目前会有部分直播间接收不到弹幕
+    //https://www.douyu.com/85894，后面这个数字就是直播间ID
+    private static final String roomId = "85894";
+
+    /**
+     * 消息接收
+     *
+     * @param inputStream 消息流
+     * @param session websocket session
+     */
     @Override
     public void handleMessage(InputStream inputStream, Session session) {
-        try {
-            String flag = "txt@=";
-            String result = read(inputStream);
-            int startIndex = result.indexOf(flag);
-            if(startIndex != -1){
-                int endIndex = result.indexOf("/", startIndex);
-                logger.info("result:{}", result.substring(startIndex + flag.length(),endIndex));
-            }
+	try {
+	    String flag = "txt@=";
+	    String result = read(inputStream);
+	    int startIndex = result.indexOf(flag);
+	    if (startIndex != -1) {
+		int endIndex = result.indexOf("/", startIndex);
+		logger.info("result:{}", result.substring(startIndex + flag.length(), endIndex));
+	    }
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+	} catch (IOException e) {
+	    e.printStackTrace();
+	}
 
     }
 
+    /**
+     * websocket建立连接时回调方法
+     * @param session websocket session
+     */
     @Override
     public void connected(Session session) {
-        try {
+	try {
 
-            //发送连接直播间请求
-            session.getBasicRemote().sendBinary(sendConncet());
+	    //发送连接直播间请求
+	    session.getBasicRemote().sendBinary(sendConncet());
 
-            //发送加入房间请求
-            session.getBasicRemote().sendBinary(sendJoin());
+	    //发送加入房间请求
+	    session.getBasicRemote().sendBinary(sendJoin());
 
-            //定时发送心跳包
-            new Thread(()->{
-                while (true){
-                    try {
-                        session.getBasicRemote().sendBinary(sendHeartbeat());
-                        Thread.sleep(10000);
-                    }catch (Exception ex){
-                        ex.printStackTrace();
-                    }
-                }
-            }).start();
+	    //定时发送心跳包
+	    new Thread(() -> {
+		while (true) {
+		    try {
+			session.getBasicRemote().sendBinary(sendHeartbeat());
+			Thread.sleep(10000);
+		    } catch (Exception ex) {
+			ex.printStackTrace();
+		    }
+		}
+	    }).start();
 
-            //session.getBasicRemote().sendText(str);
-        } catch (IOException e) {
-            logger.error("异常 {}", e);
-        }
+	    //session.getBasicRemote().sendText(str);
+	} catch (IOException e) {
+	    logger.error("异常 {}", e);
+	}
     }
 
     /**
      * 发送连接直播间请求
+     *
      * @return
      */
-    private ByteBuffer sendConncet(){
-        String str = "type@=loginreq/roomid@=85894/dfl@=sn@AA=106@ASss@AA=1@Ssn@AA=107@ASss@AA=1@Ssn@AA=108@ASss@AA=1@Ssn@AA=105@ASss@AA=1@Ssn@AA=110@ASss@AA=1/username@=qq_Rwu6wZe6/uid@=7324866/ver@=20190610/aver@=218101901/ct@=0";
-        String s = str2HexStr(str);
-        s = "da000000da000000b1020000" + s + "2f00";
+    private ByteBuffer sendConncet() {
+	String str = "type@=loginreq/roomid@=" + roomId
+			+ "/dfl@=sn@AA=106@ASss@AA=1@Ssn@AA=107@ASss@AA=1@Ssn@AA=108@ASss@AA=1@Ssn@AA=105@ASss@AA=1@Ssn@AA=110@ASss@AA=1/username@=qq_Rwu6wZe6/uid@=7324866/ver@=20190610/aver@=218101901/ct@=0";
+	String s = str2HexStr(str);
+	s = "da000000da000000b1020000" + s + "2f00";
 
-        byte[] bytes = hexToByteArray(s);
-        return ByteBuffer.wrap(bytes);
+	byte[] bytes = hexToByteArray(s);
+	return ByteBuffer.wrap(bytes);
     }
 
     /**
      * 发送加入房间请求
+     *
      * @return
      */
-    private ByteBuffer sendJoin(){
-        String str = "type@=joingroup/rid@=85894/gid@=1/";
-        String s = str2HexStr(str);
-        s = "2b0000002b000000b1020000" + s + "00";
+    private ByteBuffer sendJoin() {
+	String str = "type@=joingroup/rid@=" + roomId + "/gid@=1/";
+	String s = str2HexStr(str);
+	s = "2b0000002b000000b1020000" + s + "00";
 
-        byte[] bytes = hexToByteArray(s);
-        return ByteBuffer.wrap(bytes);
+	byte[] bytes = hexToByteArray(s);
+	return ByteBuffer.wrap(bytes);
     }
 
     /**
-     * 发送加入房间请求
+     * 心跳包，斗鱼不发心跳包服务器端会自动断开链接
+     *
      * @return
      */
-    ByteBuffer sendHeartbeat(){
-        String str = "type@=mrkl";
-        String s = str2HexStr(str);
-        s = "1400000014000000b1020000" + s + "2f00";
+    private ByteBuffer sendHeartbeat() {
+	String str = "type@=mrkl";
+	String s = str2HexStr(str);
+	s = "1400000014000000b1020000" + s + "2f00";
 
-        byte[] bytes = hexToByteArray(s);
-        return ByteBuffer.wrap(bytes);
+	byte[] bytes = hexToByteArray(s);
+	return ByteBuffer.wrap(bytes);
     }
-
 
     private String read(InputStream inputStream) throws IOException {
 
-        StringBuilder sb = new StringBuilder();
-        String line;
+	StringBuilder sb = new StringBuilder();
+	String line;
 
-        BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-        }
-        String str = sb.toString();
-        return str;
+	BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+	while ((line = br.readLine()) != null) {
+	    sb.append(line);
+	}
+	String str = sb.toString();
+	return str;
     }
 
     /**
      * 字符串转换成为16进制(无需Unicode编码)
+     *
      * @param str
+     *
      * @return
      */
     private static String str2HexStr(String str) {
-        char[] chars = "0123456789ABCDEF".toCharArray();
-        StringBuilder sb = new StringBuilder("");
-        byte[] bs = str.getBytes();
-        int bit;
-        for (byte b : bs) {
-            bit = (b & 0x0f0) >> 4;
-            sb.append(chars[bit]);
-            bit = b & 0x0f;
-            sb.append(chars[bit]);
-            // sb.append(' ');
-        }
-        return sb.toString().trim();
+	char[] chars = "0123456789ABCDEF".toCharArray();
+	StringBuilder sb = new StringBuilder("");
+	byte[] bs = str.getBytes();
+	int bit;
+	for (byte b : bs) {
+	    bit = (b & 0x0f0) >> 4;
+	    sb.append(chars[bit]);
+	    bit = b & 0x0f;
+	    sb.append(chars[bit]);
+	    // sb.append(' ');
+	}
+	return sb.toString().trim();
     }
 
-    private static byte[] hexToByteArray(String inHex){
-        int hexlen = inHex.length();
-        byte[] result;
-        if (hexlen % 2 == 1){
-            //奇数
-            hexlen++;
-            result = new byte[(hexlen/2)];
-            inHex="0"+inHex;
-        }else {
-            //偶数
-            result = new byte[(hexlen/2)];
-        }
-        int j=0;
-        for (int i = 0; i < hexlen; i+=2){
-            result[j]=hexToByte(inHex.substring(i,i+2));
-            j++;
-        }
-        return result;
+    private static byte[] hexToByteArray(String inHex) {
+	int hexlen = inHex.length();
+	byte[] result;
+	if (hexlen % 2 == 1) {
+	    //奇数
+	    hexlen++;
+	    result = new byte[(hexlen / 2)];
+	    inHex = "0" + inHex;
+	} else {
+	    //偶数
+	    result = new byte[(hexlen / 2)];
+	}
+	int j = 0;
+	for (int i = 0; i < hexlen; i += 2) {
+	    result[j] = hexToByte(inHex.substring(i, i + 2));
+	    j++;
+	}
+	return result;
     }
 
-
-    private static byte hexToByte(String inHex){
-        return (byte)Integer.parseInt(inHex,16);
+    private static byte hexToByte(String inHex) {
+	return (byte) Integer.parseInt(inHex, 16);
     }
 }

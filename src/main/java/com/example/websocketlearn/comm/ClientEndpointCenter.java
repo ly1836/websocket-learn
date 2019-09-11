@@ -1,6 +1,5 @@
 package com.example.websocketlearn.comm;
 
-//import com.cn.ccc.annotation.ExchangeClientEndpoint;
 
 import com.example.websocketlearn.comm.annt.SiteClientEndpoint;
 import org.apache.commons.collections4.CollectionUtils;
@@ -25,7 +24,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Created by jiangzuku on 2018/5/23 0023. 交易所websocket客户端管理中心
+ *websocket客户端管理中心
  */
 @Service
 public class ClientEndpointCenter {

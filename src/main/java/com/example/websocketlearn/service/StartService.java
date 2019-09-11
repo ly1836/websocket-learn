@@ -7,6 +7,11 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+
+/**
+ * 启动类
+ */
 @Component
 public class StartService implements ApplicationListener<ContextRefreshedEvent> {
 
@@ -19,6 +24,11 @@ public class StartService implements ApplicationListener<ContextRefreshedEvent> 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
         clientEndpointCenter.connectAndRegistEndpoint(applicationContext);
-        while (true){}
+        //while (true){}
+        try {
+            System.out.println(System.in.read());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

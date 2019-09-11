@@ -39,15 +39,6 @@ public abstract class BaseEndpoint extends Endpoint {
         return clientEndpointCenter.getProxyServerPort();
     }
 
-    /**
-     * 订阅房间
-     *
-     * @param session
-     */
-    public void sub(Session session) {
-
-    }
-
 
     @Override
     public void onOpen(Session session, EndpointConfig endpointConfig) {
